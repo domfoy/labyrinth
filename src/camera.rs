@@ -1,15 +1,17 @@
-use nalgebra::{
-    // Isometry3,
-    Perspective3,
-    Translation3,
-    // Point3,
-    // Vector3
-};
-use std::f32::consts::PI;
+extern crate nalgebra as na;
+
+// use na::{
+//     // Isometry3,
+//     // Perspective3,
+//     // Translation3,
+//     // Point3,
+//     // Vector3
+// };
+// use std::f32::consts::PI;
 
 pub struct Camera {
-    projection: Perspective3<f32>,
-    translation: Translation3<f32>,
+    // projection: Perspective3<f32>,
+    // translation: Translation3<f32>,
     // left_right_radians: f32,
     // up_down_radians: f32,
     // orbit_radius: f32,
@@ -17,14 +19,14 @@ pub struct Camera {
 
 impl Camera {
     pub fn new() -> Camera {
-        let field_of_view = 45.0 * PI / 180.0;
-        let aspect = 1.0;
-        let z_near = 0.1;
-        let z_far = 100.0;
+        // let field_of_view = 45.0 * PI / 180.0;
+        // let aspect = 1.0;
+        // let z_near = 0.1;
+        // let z_far = 100.0;
 
         Camera {
-            projection: Perspective3::new(field_of_view, aspect, z_near, z_far),
-            translation: Translation3::new(0.0, 0.0, 0.3),
+            // projection: Perspective3::new(field_of_view, aspect, z_near, z_far),
+            // translation: Translation3::new(0.0, 0.0, 0.0),
             // left_right_radians: 45.0f32.to_radians(),
             // up_down_radians: 80.0f32.to_radians(),
             // orbit_radius: 15.,
@@ -72,18 +74,24 @@ impl Camera {
 
     //     Point3::new(eye_x, eye_y, eye_z)
     // }
-    pub fn projection(&self) -> [f32; 16] {
-        let mut perspective_array = [0.; 16];
-        perspective_array.copy_from_slice(self.projection.as_matrix().as_slice());
+    // pub fn projection(&self) -> [f32; 16] {
+    //     let mut perspective_array = [0.; 16];
+    //     perspective_array.copy_from_slice(self.projection.as_matrix().as_slice());
 
-        perspective_array
-    }
-    pub fn view(&self) -> [f32; 16] {
-        let mut perspective_array = [0.; 16];
-        perspective_array.copy_from_slice(self.translation.to_homogeneous().as_slice());
+    //     perspective_array
+    // }
+    // pub fn view(&self) -> [f32; 16] {
+    //     let mut perspective_array = [0.; 16];
+    //     perspective_array.copy_from_slice(na::Matrix4::new(
+    //         1.0, 0.0, 0.0, 0.0,
+    //         0.0, 1.0, 0.0, 0.0,
+    //         0.0, 0.0, 1.0, 0.0,
+    //         0.0, 0.0, 0.0, 1.0,
+    //     ).as_slice());
+    //     // perspective_array.copy_from_slice(self.translation.to_homogeneous().as_slice());
 
-        perspective_array
-    }
+    //     perspective_array
+    // }
 
     // pub fn orbit_left_right(&mut self, delta: f32) {
     //     self.left_right_radians += delta;

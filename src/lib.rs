@@ -28,27 +28,29 @@ impl ProgramInfo {
         let program = init_shader_program(&context, &vert_shader, &frag_shader)?;
 
         let mut attrib_locations = HashMap::new();
+
         attrib_locations.insert(
-            "vertexPosition".to_owned(),
+            "vertex_position".to_owned(),
             context.get_attrib_location(
                 &program,
-                "aVertexPosition"
+                "a_vertex_position"
             ) as u32
         );
 
         let mut uniform_locations = HashMap::new();
+
         uniform_locations.insert(
-            "projectionMatrix".to_owned(),
+            "colour".to_owned(),
             context.get_uniform_location(
                 &program,
-                "uProjectionMatrix"
+                "u_colour"
             ).unwrap()
         );
         uniform_locations.insert(
-            "modelViewMatrix".to_owned(),
+            "model_view_matrix".to_owned(),
             context.get_uniform_location(
                 &program,
-                "uModelViewMatrix"
+                "u_model_view_matrix"
             ).unwrap()
         );
 
@@ -62,16 +64,67 @@ impl ProgramInfo {
 
 fn draw_scene(
     context: &WebGlRenderingContext,
+) {
+    let vertex_count = 4;
+    context.draw_arrays(
+        WebGlRenderingContext::TRIANGLE_STRIP,
+        0,
+        vertex_count as i32,
+    );
+}
+
+fn set_uniform(
+    context: &WebGlRenderingContext,
+    program_info: &ProgramInfo,
+    uniform_name: &str,
+    data: &[f32; 4]
+) {
+    let colour_location = program_info.uniform_locations.get(uniform_name);
+
+    context.uniform4fv_with_f32_array(
+        colour_location,
+        data
+    );
+}
+
+fn set_uniforms(
+    context: &WebGlRenderingContext,
+    program_info: &ProgramInfo,
+) {
+    set_uniform(
+        context,
+        program_info,
+        "colour",
+        &[0., 1.0, 0.6, 1.0,],
+    );
+
+    let model_view_matrix_position = program_info.uniform_locations.get("model_view_matrix");
+
+    context.uniform_matrix4fv_with_f32_array(
+        model_view_matrix_position,
+        false,
+        &[
+            0.5, 0., 0., 0.,
+            0., 1., 0., 0.,
+            0., 0., 1., 0.,
+            0., 0., 0., 1.,
+        ],
+    );
+}
+
+fn prepare_scene(
+    context: &WebGlRenderingContext,
     program_info: &ProgramInfo,
     buffer: &WebGlBuffer,
-    camera: &Camera
+    _camera: &Camera,
 ) {
-    context.clear_color(0.0, 0.0, 0.0, 1.0);
-    context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
-
     context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(buffer));
+    let vertex_position = *program_info.attrib_locations.get("vertex_position").unwrap();
+
+    context.use_program(Some(&program_info.program));
+
     context.vertex_attrib_pointer_with_i32(
-        *program_info.attrib_locations.get("vertexPosition").unwrap(),
+        vertex_position,
         3,
         WebGlRenderingContext::FLOAT,
         false,
@@ -79,30 +132,36 @@ fn draw_scene(
         0
     );
     context.enable_vertex_attrib_array(
-        *program_info.attrib_locations.get("vertexPosition").unwrap()
+        vertex_position
     );
 
-    context.use_program(Some(&program_info.program));
-    context.uniform_matrix4fv_with_f32_array(
-        program_info.uniform_locations.get("projectionMatrix"),
-        false,
-        &camera.projection()
+    set_uniforms(
+        context,
+        program_info
     );
-    context.uniform_matrix4fv_with_f32_array(
-        program_info.uniform_locations.get("modelViewMatrix"),
-        false,
-        &camera.view()
+}
+
+fn clear_scene(
+    context: &WebGlRenderingContext,
+) {
+    context.clear_color(0.0, 0.0, 0.0, 1.0);
+    context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+}
+
+fn render_scene(
+    context: &WebGlRenderingContext,
+    program_info: &ProgramInfo,
+    buffer: &WebGlBuffer,
+    camera: &Camera,
+) {
+    clear_scene(context);
+    prepare_scene(
+        context,
+        program_info,
+        buffer,
+        camera,
     );
-
-
-    {
-        let vertex_count = 4;
-        context.draw_arrays(
-            WebGlRenderingContext::TRIANGLES,
-            0,
-            vertex_count as i32,
-        );
-    }
+    draw_scene(context);
 }
 
 fn init_buffers(
@@ -112,10 +171,10 @@ fn init_buffers(
     context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
 
     let vertices: [f32; 12] = [
-        -1.0,  1.0, 0.0,
-        1.0,  1.0, 0.0,
-        -1.0, -1.0, 0.0,
-        1.0, -1.0, 0.0,
+        -0.5,  0.5, 0.0,
+        0.5,  0.5, 0.0,
+        -0.5, -0.5, 0.0,
+        0.5, -0.5, 0.0,
     ];
 
     // Note that `Float32Array::view` is somewhat dangerous (hence the
@@ -211,15 +270,14 @@ pub fn start() -> Result<(), JsValue> {
         &context,
         WebGlRenderingContext::VERTEX_SHADER,
         r#"
-        attribute vec4 aVertexPosition;
+        attribute vec4 a_vertex_position;
 
-        uniform mat4 uModelViewMatrix;
-        uniform mat4 uProjectionMatrix;
+        uniform mat4 u_model_view_matrix;
+        // uniform mat4 uProjectionMatrix;
 
         void main() {
-            // gl_Position = aVertexPosition;
-            // gl_Position = uProjectionMatrix * aVertexPosition;
-            gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+            gl_Position = u_model_view_matrix * a_vertex_position;
+            // gl_Position = uProjectionMatrix * u_model_view_matrix * a_vertex_position;
         }
     "#,
     )?;
@@ -227,8 +285,12 @@ pub fn start() -> Result<(), JsValue> {
         &context,
         WebGlRenderingContext::FRAGMENT_SHADER,
         r#"
+
+        precision mediump float;
+        uniform vec4 u_colour;
+
         void main() {
-            gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+            gl_FragColor = u_colour;
         }
     "#,
     )?;
@@ -236,6 +298,11 @@ pub fn start() -> Result<(), JsValue> {
     let positions_buffer = init_buffers(&context)?;
     let camera = Camera::new();
 
-    draw_scene(&context, &program_info, &positions_buffer, &camera);
+    render_scene(
+        &context,
+        &program_info,
+        &positions_buffer,
+        &camera
+    );
     Ok(())
 }
